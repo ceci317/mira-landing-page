@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>米拉 Mira - 你的24小时“金牌AI私域运营助手”</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Phosphor Icons 作为图标库 -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- 自定义 Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 900: '#0c4a6e' }
+                    },
+                    animation: {
+                        'scroll-left': 'scrollLeft 40s linear infinite',
+                        'scroll-right': 'scrollRight 40s linear infinite',
+                        'blob': 'blob 7s infinite',
+                        'spin-slow': 'spin 8s linear infinite',
+                    },
+                    keyframes: {
+                        scrollLeft: { '0%': { transform: 'translateX(0)' }, '100%': { transform: 'translateX(-50%)' } },
+                        scrollRight: { '0%': { transform: 'translateX(-50%)' }, '100%': { transform: 'translateX(0)' } },
+                        blob: {
+                            '0%': { transform: 'translate(0px, 0px) scale(1)' },
+                            '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
+                            '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
+                            '100%': { transform: 'translate(0px, 0px) scale(1)' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* 隐藏滚动条但保留功能 */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 跑马灯与渐变遮罩 */
+        .marquee-track { display: flex; width: max-content; gap: 1.5rem; }
+        .marquee-track:hover { animation-play-state: paused; }
+        .mask-edges { -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent); }
+
+        /* 动画延迟小工具类（补齐 Tailwind CDN 不包含的部分类） */
+        .animation-delay-2000 { animation-delay: 2s; }
+        .animation-delay-4000 { animation-delay: 4s; }
+
+        /* 滚动揭示动效 (Scroll Reveal) */
+        .reveal { opacity: 0; transform: translateY(30px); transition: all 0.8s cubic-bezier(0.5, 0, 0, 1); }
+        .reveal.active { opacity: 1; transform: translateY(0); }
+        .delay-100 { transition-delay: 100ms; }
+        .delay-200 { transition-delay: 200ms; }
+        .delay-300 { transition-delay: 300ms; }
+
+        /* 高级流光边框效果 */
+        .glow-border { position: relative; }
+        .glow-border::before {
+            content: ""; position: absolute; inset: -2px; border-radius: 1.5rem;
+            background: linear-gradient(45deg, #0ea5e9, #6366f1, #0ea5e9);
+            z-index: -1; animation: spin-slow 4s linear infinite; background-size: 200% 200%;
+        }
+        
+        /* 细微的玻璃拟态质感 */
+        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); box-shadow: 0 4px 30px rgba(0, 0, 0, 0.05); }
+
+        /* 底层流动光感（不改色，只做“流动”） */
+        .flow-layer {
+            background-image:
+                radial-gradient(60% 50% at 15% 20%, rgba(14, 165, 233, 0.22), transparent 60%),
+                radial-gradient(55% 55% at 85% 30%, rgba(99, 102, 241, 0.18), transparent 62%),
+                radial-gradient(60% 55% at 45% 90%, rgba(34, 211, 238, 0.16), transparent 65%);
+            background-size: 140% 140%;
+            animation: flowMove 14s ease-in-out infinite;
+            filter: blur(1px);
+        }
+        @keyframes flowMove {
+            0% { transform: translate3d(0, 0, 0) scale(1); background-position: 0% 40%; opacity: 0.55; }
+            50% { transform: translate3d(0, -1.5%, 0) scale(1.02); background-position: 70% 10%; opacity: 0.7; }
+            100% { transform: translate3d(0, 0, 0) scale(1); background-position: 0% 40%; opacity: 0.55; }
+        }
+
+        /* Hero 右侧：3D 设备框 + 截图轮播 */
+        .device-stage { perspective: 1400px; }
+        .device-3d {
+            --tiltX: 6deg;
+            --tiltY: -12deg;
+            transform-style: preserve-3d;
+            transform: rotateX(var(--tiltX)) rotateY(var(--tiltY)) translateZ(0);
+            transition: transform 250ms ease;
+        }
+        .device-3d:hover { transform: rotateX(calc(var(--tiltX) * 0.7)) rotateY(calc(var(--tiltY) * 0.7)) translateZ(0); }
+        .device-shadow {
+            position: absolute;
+            inset: -10% -14% -18% -14%;
+            background: radial-gradient(60% 40% at 50% 70%, rgba(17, 24, 39, 0.22), transparent 60%),
+                        radial-gradient(50% 40% at 50% 80%, rgba(17, 24, 39, 0.12), transparent 62%);
+            transform: translateZ(-60px);
+            filter: blur(18px);
+            opacity: 0.9;
+        }
+        .device-bezel {
+            position: relative;
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.85), rgba(15, 23, 42, 0.72));
+            box-shadow:
+                0 40px 80px rgba(2, 6, 23, 0.25),
+                0 18px 40px rgba(2, 6, 23, 0.18);
+            padding: 14px;
+        }
+        .device-bezel::after {
+            content: "";
+            position: absolute;
+            inset: -2px;
+            border-radius: 30px;
+            background: linear-gradient(120deg, rgba(14,165,233,0.0), rgba(99,102,241,0.35), rgba(34,211,238,0.0));
+            filter: blur(10px);
+            opacity: 0.7;
+            z-index: -1;
+            animation: bezelGlow 5.6s ease-in-out infinite;
+        }
+        @keyframes bezelGlow {
+            0%, 100% { opacity: 0.55; transform: translate3d(0,0,0); }
+            50% { opacity: 0.85; transform: translate3d(0,-1.2%,0); }
+        }
+        .device-bezel::before {
+            content: "";
+            position: absolute;
+            inset: 8px;
+            border-radius: 22px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.04));
+            pointer-events: none;
+        }
+        .device-screen {
+            position: relative;
+            border-radius: 18px;
+            overflow: hidden;
+            background: #0b1220;
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            transform: translateZ(18px);
+        }
+        .device-screen::after {
+            content: "";
+            position: absolute;
+            inset: -35% -35% auto -35%;
+            height: 70%;
+            background: radial-gradient(closest-side, rgba(255,255,255,0.22), transparent 65%);
+            transform: rotate(-12deg);
+            pointer-events: none;
+            mix-blend-mode: screen;
+            opacity: 0.9;
+        }
+        .device-camera {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%) translateZ(30px);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(2, 6, 23, 0.45);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(10px);
+        }
+        .device-camera .dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.85);
+            box-shadow: 0 0 0 2px rgba(2, 6, 23, 0.35) inset;
+        }
+        .device-camera .pill {
+            width: 54px;
+            height: 7px;
+            border-radius: 999px;
+            background: rgba(148, 163, 184, 0.28);
+        }
+        .shots { position: relative; width: 100%; height: 100%; }
+        .shot {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            transform: translateZ(10px) scale(1.01);
+            transition: opacity 700ms ease, transform 900ms ease;
+        }
+        .shot.active { opacity: 1; transform: translateZ(12px) scale(1); }
+        .shot img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: rgba(2, 6, 23, 0.92);
+            transform: translateZ(0);
+        }
+        .shot.active img { animation: softFloat 6s ease-in-out infinite; }
+        @keyframes softFloat {
+            0%, 100% { transform: translate3d(0, 0, 0); }
+            50% { transform: translate3d(0, -1.2%, 0); }
+        }
+
+        /* 科技感扫描线（很轻，不影响阅读） */
+        .device-screen .scanline {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.06) 45%, transparent 60%);
+            opacity: 0.35;
+            transform: translateY(-30%);
+            animation: scanMove 5.2s linear infinite;
+            pointer-events: none;
+            mix-blend-mode: overlay;
+        }
+        @keyframes scanMove {
+            0% { transform: translateY(-40%); }
+            100% { transform: translateY(120%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .flow-layer, .device-3d, .shot, .shot.active img { animation: none !important; transition: none !important; }
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800 bg-slate-50 antialiased selection:bg-primary-100 selection:text-primary-900 overflow-x-hidden">
+
+    <!-- 动态流体背景层 -->
+    <div class="fixed inset-0 z-[-1] overflow-hidden pointer-events-none">
+        <div class="absolute inset-0 flow-layer"></div>
+        <div class="absolute top-[-10%] left-[-10%] w-96 h-96 bg-blue-300 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob"></div>
+        <div class="absolute top-[20%] right-[-10%] w-96 h-96 bg-purple-300 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob animation-delay-2000"></div>
+        <div class="absolute bottom-[-20%] left-[20%] w-96 h-96 bg-cyan-300 rounded-full mix-blend-multiply filter blur-[100px] opacity-40 animate-blob animation-delay-4000"></div>
+        <!-- 噪点纹理，增加质感 -->
+        <div class="absolute inset-0 opacity-[0.03]" style="background-image: url('data:image/svg+xml,%3Csvg viewBox=%220 0 200 200%22 xmlns=%22http://www.w3.org/2000/svg%22%3E%3Cfilter id=%22noiseFilter%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.65%22 numOctaves=%223%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22100%25%22 height=%22100%25%22 filter=%22url(%23noiseFilter)%22/%3E%3C/svg%3E');"></div>
+    </div>
+
+    <!-- 导航栏 Navbar -->
+    <nav id="navbar" class="fixed w-full bg-white/50 backdrop-blur-xl z-50 border-b border-gray-200/50 transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex-shrink-0 flex items-center gap-3 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img class="h-10 w-10 rounded-xl shadow-sm" src="./assets/mira-avatar.jpeg" alt="Mira Logo" onerror="this.src='https://ui-avatars.com/api/?name=Mira&background=0284c7&color=fff&rounded=true'">
+                    <span class="font-bold text-xl tracking-tight text-gray-900">米拉 Mira</span>
+                </div>
+                <!-- 桌面端菜单 -->
+                <div class="hidden md:flex space-x-8 items-center">
+                    <a href="#features" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">核心功能</a>
+                    <a href="#how-it-works" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">如何使用</a>
+                    <a href="#testimonials" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">客户案例</a>
+                    <a href="#partner" class="text-gray-600 hover:text-primary-600 font-medium transition-colors">代理招募</a>
+                    <a href="https://my.feishu.cn/wiki/LmQDwQA7fi0mkJkrNhFccAJdnNf?fromScene=spaceOverview" target="_blank" class="bg-gray-900 text-white px-6 py-2.5 rounded-full font-medium hover:bg-gray-800 shadow-md transition-all hover:scale-105">获取软件</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 首屏 Hero Section -->
+    <section class="pt-32 pb-20 lg:pt-48 lg:pb-32 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            <div class="grid lg:grid-cols-2 gap-16 lg:gap-8 items-center">
+                <!-- 左侧文案 -->
+                <div class="text-center lg:text-left z-10 reveal">
+                    <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/60 backdrop-blur-md border border-gray-200/50 text-gray-700 text-sm font-semibold mb-8 shadow-sm">
+                        <span class="flex h-2 w-2 rounded-full bg-primary-500 animate-ping absolute"></span>
+                        <span class="flex h-2 w-2 rounded-full bg-primary-500 relative"></span>
+                        V1.4.0 全新发布：真正能发文件的 AI
+                    </div>
+                    <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 leading-[1.15] mb-6 tracking-tight">
+                        你的24小时<br/>
+                        <span class="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-500">“金牌AI私域运营助手”</span>
+                    </h1>
+                    <p class="text-lg sm:text-xl text-gray-600 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light">
+                        看得懂业务、发得出文件、拥有超高情商。<br class="hidden sm:block"/>帮你加 100 倍杠杆，彻底解放双手，让私域业绩起飞。
+                    </p>
+                    <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                        <a href="https://my.feishu.cn/wiki/LmQDwQA7fi0mkJkrNhFccAJdnNf?fromScene=spaceOverview" target="_blank" class="bg-gray-900 text-white px-8 py-4 rounded-2xl font-bold text-lg hover:bg-black shadow-xl shadow-gray-900/20 transition-all hover:-translate-y-1 flex items-center justify-center gap-2 group">
+                            获取软件 <i class="ph-bold ph-arrow-right transition-transform group-hover:translate-x-1"></i>
+                        </a>
+                        <button onclick="toggleModal('qrModal')" class="bg-white/60 backdrop-blur-md text-gray-900 border border-gray-200/50 px-8 py-4 rounded-2xl font-bold text-lg hover:bg-white transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow">
+                            <i class="ph-bold ph-chat-circle-dots"></i> 联系我们
+                        </button>
+                    </div>
+                    <div class="mt-10 flex items-center justify-center lg:justify-start gap-6 text-sm text-gray-500 font-medium">
+                        <span class="flex items-center gap-1.5"><i class="ph-fill ph-shield-check text-emerald-500 text-lg"></i> 物理级防封</span>
+                        <span class="flex items-center gap-1.5"><i class="ph-fill ph-hard-drives text-emerald-500 text-lg"></i> 数据纯本地</span>
+                        <span class="flex items-center gap-1.5"><i class="ph-fill ph-file-pdf text-emerald-500 text-lg"></i> 支持发文件</span>
+                    </div>
+                </div>
+                <!-- 右侧视觉展示（3D 设备框 + 产品截图轮播） -->
+                <div class="relative mx-auto w-full max-w-lg lg:max-w-none reveal delay-200">
+                    <!-- 发光修饰底板 -->
+                    <div class="absolute -inset-1 bg-gradient-to-tr from-primary-200 to-indigo-200 rounded-[2.5rem] blur-2xl opacity-60"></div>
+                    <div class="relative bg-white/40 backdrop-blur-xl rounded-[2rem] shadow-2xl overflow-hidden border border-white/60 aspect-[4/3] flex items-center justify-center p-3">
+                        <div class="device-stage w-full h-full flex items-center justify-center">
+                            <div id="heroDevice" class="device-3d w-[92%] md:w-[88%] max-w-[640px] relative">
+                                <div class="device-shadow"></div>
+                                <div class="device-bezel">
+                                    <div class="device-camera">
+                                        <span class="dot"></span>
+                                        <span class="pill"></span>
+                                    </div>
+                                    <div class="device-screen aspect-square">
+                                        <div class="absolute top-3 left-3 right-3 z-20 flex items-center justify-between">
+                                            <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/70 border border-white/60 backdrop-blur-md shadow-sm">
+                                                <span id="heroShotDot" class="h-2 w-2 rounded-full bg-primary-400 shadow-[0_0_0_3px_rgba(14,165,233,0.18)]"></span>
+                                                <span id="heroShotTitle" class="text-xs font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-500">全能 AI 客服</span>
+                                            </div>
+                                            <div class="hidden sm:flex items-center gap-1.5 text-[11px] font-semibold text-white/60">
+                                                <span id="heroShotIndex">1</span>/<span id="heroShotTotal">5</span>
+                                            </div>
+                                        </div>
+                                        <div id="heroShots" class="shots">
+                                            <div class="shot active" data-title="全能 AI 客服（消息接待策略）"><img src="./assets/screens/01.png" alt="Mira 产品截图：全能 AI 客服（消息接待策略）"></div>
+                                            <div class="shot" data-title="专属知识库管理（Prompt/资料库）"><img src="./assets/screens/02.png" alt="Mira 产品截图：专属知识库管理（Prompt/资料库）"></div>
+                                            <div class="shot" data-title="全能 AI 客服（分身/人设配置）"><img src="./assets/screens/03.png" alt="Mira 产品截图：全能 AI 客服（分身/人设配置）"></div>
+                                            <div class="shot" data-title="自动 RPA 功能（自动化任务）"><img src="./assets/screens/04.png" alt="Mira 产品截图：自动 RPA 功能（自动化任务）"></div>
+                                            <div class="shot" data-title="联系人管理（标签&对话资产）"><img src="./assets/screens/05.png" alt="Mira 产品截图：联系人管理（标签&对话资产）"></div>
+                                        </div>
+                                        <div class="scanline"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 浮动标签卡 - 质感升级 -->
+                    <div class="absolute -bottom-6 -left-8 glass-card px-5 py-4 rounded-2xl flex items-center gap-4 animate-[transform_3s_ease-in-out_infinite] hover:scale-105 transition-transform" style="animation: blob 5s infinite ease-in-out;">
+                        <div id="recentFileBadge" class="h-12 w-12 bg-gradient-to-br from-red-400 to-red-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-red-500/30">
+                            <i id="recentFileIcon" class="ph-fill ph-file-pdf text-2xl"></i>
+                        </div>
+                        <div>
+                            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-0.5">刚刚成功发送</p>
+                            <p id="recentFileName" class="text-gray-900 font-bold">楼盘销讲资料.pdf</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心功能区 Features -->
+    <section id="features" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-20 reveal">
+                <h2 class="text-sm font-bold tracking-widest text-primary-600 uppercase mb-3">Core Features</h2>
+                <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">把金牌销冠的脑子，装进这四大超级模块</h3>
+                <p class="text-lg text-gray-500 font-light">远超普通“自动回复工具”，我们真正在业务流的每一个痛点都做了深度定制。</p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6 lg:gap-8">
+                <!-- Card 1 -->
+                <div class="glass-card p-8 lg:p-10 rounded-[2rem] hover:-translate-y-1 transition-all duration-300 group reveal">
+                    <div class="h-14 w-14 bg-gradient-to-br from-blue-500 to-primary-600 rounded-2xl flex items-center justify-center text-white mb-8 shadow-lg shadow-blue-500/30 group-hover:scale-110 transition-transform">
+                        <i class="ph-duotone ph-robot text-3xl"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-900 mb-4">全能 AI 客服 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg ml-2">高情商</span></h4>
+                    <ul class="space-y-4 text-gray-600">
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-primary-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">全能物料秒发：</strong>自动分段发送流畅文本，精准触达图片与业务文件。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-primary-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">高情商策略：</strong>支持跳过同事不抢话、群聊内仅被@才回复。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-primary-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">人机无缝协作：</strong>遇到难题自动挂起，支持人工随时介入接管。</span></li>
+                    </ul>
+                </div>
+                <!-- Card 2 -->
+                <div class="glass-card p-8 lg:p-10 rounded-[2rem] hover:-translate-y-1 transition-all duration-300 group reveal delay-100">
+                    <div class="h-14 w-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center text-white mb-8 shadow-lg shadow-indigo-500/30 group-hover:scale-110 transition-transform">
+                        <i class="ph-duotone ph-users-three text-3xl"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-900 mb-4">联系人管理 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg ml-2">精准锁客</span></h4>
+                    <ul class="space-y-4 text-gray-600">
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-indigo-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">全自动资产同步：</strong>自动抓取好友数据，群聊通讯录本地加密防丢。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-indigo-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">千人千面数字员工：</strong>依据客户标签，动态配置专属AI人设。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-indigo-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">高优精准群发：</strong>黑白名单个性化管理，随时随地一键高效群发。</span></li>
+                    </ul>
+                </div>
+                <!-- Card 3 -->
+                <div class="glass-card p-8 lg:p-10 rounded-[2rem] hover:-translate-y-1 transition-all duration-300 group reveal">
+                    <div class="h-14 w-14 bg-gradient-to-br from-cyan-500 to-teal-500 rounded-2xl flex items-center justify-center text-white mb-8 shadow-lg shadow-cyan-500/30 group-hover:scale-110 transition-transform">
+                        <i class="ph-duotone ph-folder-open text-3xl"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-900 mb-4">专属知识库管理 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg ml-2">极速上岗</span></h4>
+                    <ul class="space-y-4 text-gray-600">
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-cyan-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">一键文件夹学习：</strong>丢入资料，三分钟无代码克隆销售专家。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-cyan-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">自由定制 AI 人设：</strong>自定义 Prompt，死死拿捏品牌专属销讲话术。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-cyan-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">RAG 语义理解：</strong>颠覆传统关键词匹配，客户绕弯提问也能找对答案。</span></li>
+                    </ul>
+                </div>
+                <!-- Card 4 -->
+                <div class="glass-card p-8 lg:p-10 rounded-[2rem] hover:-translate-y-1 transition-all duration-300 group reveal delay-100">
+                    <div class="h-14 w-14 bg-gradient-to-br from-emerald-400 to-green-600 rounded-2xl flex items-center justify-center text-white mb-8 shadow-lg shadow-emerald-500/30 group-hover:scale-110 transition-transform">
+                        <i class="ph-duotone ph-lightning text-3xl"></i>
+                    </div>
+                    <h4 class="text-2xl font-bold text-gray-900 mb-4">自动 RPA 功能 <span class="text-sm font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded-lg ml-2">拓客永动机</span></h4>
+                    <ul class="space-y-4 text-gray-600">
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-emerald-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">无人值守流程：</strong>全自动通过好友申请、打标签并发送图文话术。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-emerald-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">全自动暴力加人：</strong>Excel导入名单，循环执行加好友，彻底解放双手。</span></li>
+                        <li class="flex items-start gap-3"><i class="ph-fill ph-check-circle text-emerald-500 mt-1 flex-shrink-0 text-lg"></i> <span><strong class="text-gray-900">智能主动推送：</strong>调用大模型，生成带有客户昵称的千人千面问候语。</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 操作步骤 How it works -->
+    <section id="how-it-works" class="py-24 border-y border-gray-200/50 bg-white/30 backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal">
+            <h2 class="text-3xl font-extrabold text-gray-900 mb-16">只需三步，你的数字销冠即可上岗</h2>
+            <div class="grid md:grid-cols-3 gap-12 relative">
+                <!-- 高级感连接线 -->
+                <div class="hidden md:block absolute top-10 left-[20%] right-[20%] h-[1px] bg-gradient-to-r from-transparent via-gray-300 to-transparent z-0"></div>
+                
+                <div class="relative z-10 group cursor-default">
+                    <div class="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center text-primary-600 text-2xl font-bold shadow-[0_0_40px_rgba(14,165,233,0.15)] mb-6 border border-gray-100 group-hover:scale-110 group-hover:shadow-[0_0_40px_rgba(14,165,233,0.3)] transition-all duration-300">
+                        <i class="ph-duotone ph-download-simple text-3xl"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">1. 下载并激活软件</h4>
+                    <p class="text-gray-500 font-light">安装极简 Windows 客户端，输入专属密钥，一键点亮私域超能力。</p>
+                </div>
+                <div class="relative z-10 group cursor-default reveal delay-100">
+                    <div class="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center text-primary-600 text-2xl font-bold shadow-[0_0_40px_rgba(14,165,233,0.15)] mb-6 border border-gray-100 group-hover:scale-110 group-hover:shadow-[0_0_40px_rgba(14,165,233,0.3)] transition-all duration-300">
+                        <i class="ph-duotone ph-database text-3xl"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">2. “喂饭式”建知识库</h4>
+                    <p class="text-gray-500 font-light">扔进公司产品PDF、常用话术Word，AI 三分钟全自动完成业务学习。</p>
+                </div>
+                <div class="relative z-10 group cursor-default reveal delay-200">
+                    <div class="mx-auto h-20 w-20 bg-white rounded-full flex items-center justify-center text-primary-600 text-2xl font-bold shadow-[0_0_40px_rgba(14,165,233,0.15)] mb-6 border border-gray-100 group-hover:scale-110 group-hover:shadow-[0_0_40px_rgba(14,165,233,0.3)] transition-all duration-300">
+                        <i class="ph-duotone ph-rocket-launch text-3xl"></i>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-900 mb-3">3. 一键托管，自动赚钱</h4>
+                    <p class="text-gray-500 font-light">一键点击“开始”，剩下的接待、发送、锁客，全交给 Mira。</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 客户反馈区 Testimonials (Marquee) -->
+    <section id="testimonials" class="py-24 bg-gray-900 text-white overflow-hidden relative">
+        <!-- 暗色流体背景 -->
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-900/40 via-gray-900 to-gray-900"></div>
+        
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-16 text-center relative z-10 reveal">
+            <h2 class="text-sm font-bold tracking-widest text-primary-400 uppercase mb-3">Testimonials</h2>
+            <h3 class="text-3xl md:text-4xl font-extrabold mb-4 text-white">来自千行百业的真实反馈</h3>
+            <p class="text-gray-400 text-lg font-light">1000+ 老板的选择，看看他们每天怎么省下 3 小时</p>
+        </div>
+
+        <!-- 跑马灯容器，带左右边缘羽化遮罩 -->
+        <div class="marquee-container space-y-6 w-full mask-edges relative z-10 pb-4">
+            <!-- 第一排 向左滚动 -->
+            <div class="marquee-track animate-scroll-left">
+                <script>
+                    const row1 = [
+                        { name: "李总 | 某头部房产代理机构", icon: "ph-house-line", color: "text-blue-400", bg:"bg-blue-400/10", text: "“半夜截胡绝了！以前半夜12点客户问价我都睡了。现在Mira不仅秒回，还能精准发去高清户型图和几十页的楼盘销讲PDF，上个月靠它半夜锁定了3个大单！”" },
+                        { name: "陈老师 | 抖音商业认知大V", icon: "ph-graduation-cap", color: "text-purple-400", bg:"bg-purple-400/10", text: "“发完爆款视频，微信涌进几百人求资料。手发能累死。Mira全自动通过好友申请，打标签，然后秒发几百兆网盘链接。我的助教人工成本直接归零，太香了！”" },
+                        { name: "王老板 | 奢品买手工作室", icon: "ph-handbag", color: "text-pink-400", bg:"bg-pink-400/10", text: "“我们SKU极其复杂，现在把商品表喂给Mira，它不仅找得快，还能识别图片链接直接发图给客户，要颜色发颜色，转化率肉眼可见地提升！”" },
+                        { name: "林院长 | 轻医美连锁诊所", icon: "ph-first-aid", color: "text-rose-400", bg:"bg-rose-400/10", text: "“客户总问重复疗程和价格。把价目表喂给AI后，它能报精准价格，还能配官方对比图和术前须知PDF。语气专业，客户都以为是金牌咨询师在亲自接待。”" },
+                        { name: "张老师 | 头部留学中介", icon: "ph-airplane-tilt", color: "text-cyan-400", bg:"bg-cyan-400/10", text: "“几百页的院校库人脑根本记不住。现在客户一报背景，Mira靠着强大的上下文记忆，瞬间把最匹配的学校PDF发过去，直接把客户聊得心服口服。”" },
+                        { name: "赵店长 | 连锁私房烘焙", icon: "ph-cake", color: "text-orange-400", bg:"bg-orange-400/10", text: "“每天上百个订蛋糕的重复问题。设置好Mira后，它全自动通过好友，发送当天菜单图片，甚至能自动拉客户进福利群！拓客永动机名不虚传。”" }
+                    ];
+                    let row1HTML = '';
+                    for(let i=0; i<2; i++) {
+                        row1.forEach(item => {
+                            row1HTML += `
+                                <div class="w-80 md:w-[420px] flex-shrink-0 bg-white/[0.03] backdrop-blur-md border border-white/[0.05] p-8 rounded-3xl hover:bg-white/[0.05] transition-colors">
+                                    <div class="flex items-center gap-4 mb-6">
+                                        <div class="h-12 w-12 ${item.bg} rounded-2xl flex items-center justify-center ${item.color} border border-white/5"><i class="ph-fill ${item.icon} text-2xl"></i></div>
+                                        <div class="font-bold text-gray-200">${item.name}</div>
+                                    </div>
+                                    <p class="text-gray-400 leading-relaxed font-light">${item.text}</p>
+                                </div>
+                            `;
+                        });
+                    }
+                    document.write(row1HTML);
+                </script>
+            </div>
+
+            <!-- 第二排 向右滚动 -->
+            <div class="marquee-track animate-scroll-right">
+                <script>
+                    const row2 = [
+                        { name: "刘总监 | SaaS系统供应商", icon: "ph-desktop", color: "text-indigo-400", bg:"bg-indigo-400/10", text: "“最牛的是‘跳过群聊同事’和‘人工随时接管’！它在群里发产品手册PDF绝不抢话。遇到难搞的大客户，系统挂起通知我，人机配合简直完美无瑕。”" },
+                        { name: "周周 | 高端定制游主理人", icon: "ph-map-pin", color: "text-teal-400", bg:"bg-teal-400/10", text: "“客户行程要求五花八门，Mira的RAG理解非常逆天。不论怎么绕弯子问，它都能从长篇文档里抠出精准的行程安排发过去，甚至带上温馨问候，情商极高。”" },
+                        { name: "吴律师 | 律所合伙人", icon: "ph-scales", color: "text-amber-400", bg:"bg-amber-400/10", text: "“对于基础法律咨询，Mira对答如流。最让我放心的是，遇到复杂纠纷案件，它会自动判定并挂起对话让我亲自回。既过滤了白嫖党，又保住了高净值案源。”" },
+                        { name: "教练Soso | 连锁普拉提馆", icon: "ph-barbell", color: "text-emerald-400", bg:"bg-emerald-400/10", text: "“智能主动推送太好用了！批量发课表图片，还能调用AI生成带有每个会员微信昵称的暖心问候语。千人千面，客户看不出是群发，续卡率高了30%。”" },
+                        { name: "郑经理 | 某新能源品牌店长", icon: "ph-car-profile", color: "text-red-400", bg:"bg-red-400/10", text: "“几万字的汽车参数手册塞进知识库。现在哪怕客户问‘后备箱容积多少’这种冷门问题，Mira也能一秒答对。三分钟就能克隆一个汽车专家。”" },
+                        { name: "Kevin | 独立开发团队", icon: "ph-code", color: "text-gray-300", bg:"bg-gray-400/10", text: "“数据本地存储这点让我彻底吃下了定心丸！客户名单是命根子，Mira不走云端全本地加密，再加上纯视觉防封号，这是我用过最安心的RPA工具。”" }
+                    ];
+                    let row2HTML = '';
+                    for(let i=0; i<2; i++) {
+                        row2.forEach(item => {
+                            row2HTML += `
+                                <div class="w-80 md:w-[420px] flex-shrink-0 bg-white/[0.03] backdrop-blur-md border border-white/[0.05] p-8 rounded-3xl hover:bg-white/[0.05] transition-colors">
+                                    <div class="flex items-center gap-4 mb-6">
+                                        <div class="h-12 w-12 ${item.bg} rounded-2xl flex items-center justify-center ${item.color} border border-white/5"><i class="ph-fill ${item.icon} text-2xl"></i></div>
+                                        <div class="font-bold text-gray-200">${item.name}</div>
+                                    </div>
+                                    <p class="text-gray-400 leading-relaxed font-light">${item.text}</p>
+                                </div>
+                            `;
+                        });
+                    }
+                    document.write(row2HTML);
+                </script>
+            </div>
+        </div>
+    </section>
+
+    <!-- 产品套餐 Pricing -->
+    <section id="pricing" class="py-28 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-20 reveal">
+                <h2 class="text-sm font-bold tracking-widest text-primary-600 uppercase mb-3">Pricing Plans</h2>
+                <h3 class="text-3xl md:text-4xl font-extrabold text-gray-900 mb-6">雇一个24小时金牌助理，只需一顿火锅钱</h3>
+                <p class="text-lg text-gray-500 font-light">按月订阅，没有沉重的年费包袱，随时可取消。</p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-8 max-w-6xl mx-auto items-center">
+                <!-- Plus 卡片 -->
+                <div class="glass-card rounded-[2rem] p-10 reveal">
+                    <h4 class="text-xl font-bold text-gray-900 mb-2">进阶版 (Plus)</h4>
+                    <p class="text-gray-500 text-sm mb-8 h-10">适合懂技术、自带API的老手</p>
+                    <div class="mb-8 flex items-baseline gap-1">
+                        <span class="text-5xl font-extrabold text-gray-900 tracking-tight">￥229</span>
+                        <span class="text-gray-500 font-medium"> / 月</span>
+                    </div>
+                    <ul class="space-y-4 mb-10 text-gray-600">
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 全能 AI 客服模块</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 联系人与 RPA 管理</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 无限知识库与图文发送</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 免费持续升级迭代</li>
+                        <li class="flex items-start gap-3 mt-4 pt-4 border-t border-gray-100"><i class="ph-fill ph-info text-orange-400 mt-1"></i> <span class="text-sm text-gray-500 font-light">不含算力，需自备阿里云 API Key 扣费</span></li>
+                    </ul>
+                    <a href="https://my.feishu.cn/wiki/LmQDwQA7fi0mkJkrNhFccAJdnNf?fromScene=spaceOverview" target="_blank" class="block w-full py-4 px-4 bg-white border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-800 font-bold text-center rounded-2xl transition-all">获取软件</a>
+                </div>
+
+                <!-- Pro 卡片 (呼吸流光边框) -->
+                <div class="glow-border rounded-[2rem] transform lg:scale-105 z-10 reveal delay-100 shadow-2xl shadow-primary-500/20">
+                    <div class="bg-white/90 backdrop-blur-2xl rounded-[2rem] p-10 relative h-full">
+                        <div class="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                            <span class="bg-gray-900 text-white text-xs font-bold px-4 py-1.5 rounded-full shadow-lg flex items-center gap-1.5 uppercase tracking-wider"><i class="ph-fill ph-sparkle text-primary-400"></i> 老板首选强推</span>
+                        </div>
+                        <h4 class="text-xl font-bold text-gray-900 mb-2 mt-2">尊享版 (Pro)</h4>
+                        <p class="text-primary-600 text-sm font-medium mb-8 h-10">不想折腾技术？要直接赚钱的老板看这里</p>
+                        <div class="mb-8 flex items-baseline gap-1">
+                            <span class="text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-indigo-600 tracking-tight">￥329</span>
+                            <span class="text-gray-500 font-medium"> / 月</span>
+                        </div>
+                        <ul class="space-y-4 mb-10 text-gray-700 font-medium">
+                            <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-primary-500 text-lg"></i> 包含 Plus 版所有高级功能</li>
+                            <li class="flex items-center gap-3"><i class="ph-fill ph-star text-orange-400 text-lg"></i> <b>内置满血版 AI 大脑算力</b></li>
+                            <li class="flex items-center gap-3"><i class="ph-fill ph-star text-orange-400 text-lg"></i> <b>开箱即用，免配复杂 API</b></li>
+                            <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-primary-500 text-lg"></i> 包含每月充足对话交互额度</li>
+                            <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-primary-500 text-lg"></i> 专属售后技术答疑群</li>
+                        </ul>
+                        <a href="https://my.feishu.cn/wiki/LmQDwQA7fi0mkJkrNhFccAJdnNf?fromScene=spaceOverview" target="_blank" class="block w-full py-4 px-4 bg-gray-900 hover:bg-black text-white font-bold text-lg text-center rounded-2xl shadow-lg shadow-gray-900/20 transition-transform hover:-translate-y-1">获取软件</a>
+                    </div>
+                </div>
+
+                <!-- VIP 卡片 -->
+                <div class="glass-card rounded-[2rem] p-10 reveal delay-200">
+                    <h4 class="text-xl font-bold text-gray-900 mb-2">大客定制版 (VIP)</h4>
+                    <p class="text-gray-500 text-sm mb-8 h-10">适合需要深度结合的机构与团队</p>
+                    <div class="mb-8 flex items-baseline gap-1">
+                        <span class="text-4xl font-extrabold text-gray-900 tracking-tight">价格面议</span>
+                    </div>
+                    <ul class="space-y-4 mb-10 text-gray-600">
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 包含 Pro 版全部功能</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 深度业务流私有化改造</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 专属高阶开发定制包</li>
+                        <li class="flex items-center gap-3"><i class="ph-fill ph-check-circle text-gray-400 text-lg"></i> 1V1专属技术管家服务</li>
+                        <li class="flex items-center gap-3 opacity-0 hidden lg:block"><i class="ph-bold ph-check"></i> 占位符保持高度一致</li>
+                    </ul>
+                    <button onclick="toggleModal('qrModal')" class="block w-full py-4 px-4 bg-white border border-gray-200 hover:border-gray-900 hover:text-gray-900 text-gray-600 font-bold text-center rounded-2xl transition-all">需要私聊</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 代理招募 Banner -->
+    <section id="partner" class="py-16 relative overflow-hidden">
+        <div class="absolute inset-0 bg-gray-900"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_bottom_left,_var(--tw-gradient-stops))] from-primary-900/50 via-transparent to-transparent"></div>
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10 reveal">
+            <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">📢 想要把 Mira 拿去卖给同行赚钱？</h2>
+            <p class="text-gray-300 mb-10 text-lg font-light">我们提供极低拿货底价与高额首月分润，支持 OEM 代理打包售卖！</p>
+            <a href="https://my.feishu.cn/wiki/Fcs2w1BERiZddNkTg95ceJMynne?fromScene=spaceOverview" target="_blank" class="inline-flex items-center justify-center gap-3 bg-white text-gray-900 px-8 py-4 rounded-2xl font-bold hover:bg-gray-100 transition-all hover:scale-105 shadow-xl shadow-white/10 group">
+                点击了解合伙人计划 <i class="ph-bold ph-arrow-right group-hover:translate-x-1 transition-transform"></i>
+            </a>
+        </div>
+    </section>
+
+    <!-- 页脚 Footer -->
+    <footer class="bg-white py-12 border-t border-gray-100">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center md:items-start gap-12">
+            <!-- Left: Logo & Slogan -->
+            <div class="flex flex-col items-center md:items-start reveal">
+                <div class="flex items-center gap-3 mb-4 cursor-pointer" onclick="window.scrollTo(0,0)">
+                    <img class="h-8 w-8 rounded-lg grayscale opacity-70 hover:grayscale-0 hover:opacity-100 transition-all" src="./assets/mira-avatar.jpeg" alt="Mira Logo" onerror="this.src='https://ui-avatars.com/api/?name=M&background=cbd5e1&color=fff&rounded=true'">
+                    <span class="font-bold text-xl text-gray-900">米拉 Mira</span>
+                </div>
+                <p class="text-gray-500 text-sm font-light">为私域加100倍杠杆。</p>
+                <p class="text-gray-400 text-xs mt-6">Copyright © 2026 Mira AI. All rights reserved.</p>
+            </div>
+
+            <!-- Middle: Links -->
+            <div class="flex flex-wrap justify-center gap-8 text-sm font-medium text-gray-500 reveal delay-100">
+                <a href="https://my.feishu.cn/wiki/W339wAmY4iPWFHkpHfHcvJCyn6e?fromScene=spaceOverview" target="_blank" class="hover:text-primary-600 transition-colors">产品功能清单</a>
+                <a href="https://www.bilibili.com/video/BV12SQ1BTE5d/?spm_id_from=333.337.search-card.all.click&vd_source=fa6f89069e7c9750a2ae89592f82b076" target="_blank" class="hover:text-primary-600 transition-colors">功能演示视频</a>
+                <a href="https://my.feishu.cn/wiki/NSVRwFBvXicAVbkAfZscqhP7nJh?fromScene=spaceOverview" target="_blank" class="hover:text-primary-600 transition-colors">操作文档</a>
+            </div>
+
+            <!-- Right: Contact -->
+            <div class="flex flex-col items-center md:items-end reveal delay-200">
+                <p class="text-sm font-bold text-gray-900 mb-4">联系我们</p>
+                <div class="p-2 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
+                    <img src="./assets/wechat-qr.jpg" alt="客服微信" class="h-24 w-24 rounded-lg" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\\'h-24 w-24 bg-gray-50 rounded-lg border flex items-center justify-center text-xs text-gray-400 text-center p-2\\'>二维码缺失</div>')">
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- 联系我们 弹窗 (Modal) -->
+    <div id="qrModal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-gray-900/40 backdrop-blur-md transition-opacity" onclick="toggleModal('qrModal')"></div>
+        <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+            <div class="relative bg-white/90 backdrop-blur-xl rounded-[2rem] border border-white text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:max-w-sm w-full">
+                <div class="absolute top-4 right-4">
+                    <button onclick="toggleModal('qrModal')" class="text-gray-400 hover:text-gray-900 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors">
+                        <i class="ph-bold ph-x text-xl"></i>
+                    </button>
+                </div>
+                <div class="px-8 pt-12 pb-8 text-center">
+                    <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-gradient-to-br from-green-400 to-green-500 mb-6 shadow-lg shadow-green-500/30">
+                        <i class="ph-fill ph-wechat-logo text-3xl text-white"></i>
+                    </div>
+                    <h3 class="text-2xl font-bold text-gray-900 mb-2">添加人工客服微信</h3>
+                    <p class="text-sm text-gray-500 mb-8 font-light">扫码或长按识别二维码<br/>获取一对一咨询及专属测试方案</p>
+                    
+                    <div class="flex justify-center mb-4">
+                        <div class="p-3 bg-white rounded-2xl shadow-sm border border-gray-100">
+                            <img src="./assets/wechat-qr.jpg" alt="扫码添加微信" class="w-48 h-48 rounded-xl" onerror="this.style.display='none'; this.insertAdjacentHTML('afterend', '<div class=\\'w-48 h-48 bg-gray-50 rounded-xl border-2 border-dashed flex items-center justify-center text-sm text-gray-400\\'>二维码缺失</div>')">
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-400 mt-6 font-medium">工作日 9:00 - 21:00 极速响应</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 交互脚本 -->
+    <script>
+        // 弹窗控制逻辑
+        function toggleModal(modalID) {
+            const modal = document.getElementById(modalID);
+            if(modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                document.body.style.overflow = 'hidden'; // 防止背景滚动
+            } else {
+                modal.classList.add('hidden');
+                document.body.style.overflow = 'auto';
+            }
+        }
+
+        // 视频降级处理
+        document.addEventListener("DOMContentLoaded", function() {
+            // Hero 右侧截图轮播（3D 设备框内）
+            const heroShotsContainer = document.getElementById('heroShots');
+            const heroDevice = document.getElementById('heroDevice');
+            if (heroShotsContainer) {
+                const shots = Array.from(heroShotsContainer.querySelectorAll('.shot'));
+                let current = 0;
+                let timer = null;
+                const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                const heroShotTitle = document.getElementById('heroShotTitle');
+                const heroShotIndex = document.getElementById('heroShotIndex');
+                const heroShotTotal = document.getElementById('heroShotTotal');
+                const heroShotDot = document.getElementById('heroShotDot');
+                const palette = [
+                    { dot: 'bg-primary-400', ring: 'shadow-[0_0_0_3px_rgba(14,165,233,0.18)]' },
+                    { dot: 'bg-cyan-300', ring: 'shadow-[0_0_0_3px_rgba(34,211,238,0.18)]' },
+                    { dot: 'bg-indigo-300', ring: 'shadow-[0_0_0_3px_rgba(99,102,241,0.18)]' },
+                    { dot: 'bg-emerald-300', ring: 'shadow-[0_0_0_3px_rgba(52,211,153,0.18)]' },
+                    { dot: 'bg-amber-300', ring: 'shadow-[0_0_0_3px_rgba(252,211,77,0.18)]' }
+                ];
+
+                function setActive(index) {
+                    shots.forEach((el, i) => el.classList.toggle('active', i === index));
+                    const active = shots[index];
+                    const title = active?.dataset?.title || '产品能力展示';
+                    if (heroShotTitle) heroShotTitle.textContent = title;
+                    if (heroShotIndex) heroShotIndex.textContent = String(index + 1);
+                    if (heroShotTotal) heroShotTotal.textContent = String(shots.length);
+                    if (heroShotDot) {
+                        const p = palette[index % palette.length];
+                        heroShotDot.className = `h-2 w-2 rounded-full ${p.dot} ${p.ring}`;
+                    }
+                }
+                function next() {
+                    current = (current + 1) % shots.length;
+                    setActive(current);
+                }
+                function start() {
+                    if (prefersReduced || shots.length <= 1) return;
+                    stop();
+                    timer = window.setInterval(next, 2400);
+                }
+                function stop() {
+                    if (!timer) return;
+                    window.clearInterval(timer);
+                    timer = null;
+                }
+
+                setActive(0);
+                start();
+                heroShotsContainer.addEventListener('mouseenter', stop);
+                heroShotsContainer.addEventListener('mouseleave', start);
+
+                // 轻微“跟随”透视（桌面端）
+                if (heroDevice && !prefersReduced) {
+                    const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+                    heroDevice.addEventListener('mousemove', (e) => {
+                        const rect = heroDevice.getBoundingClientRect();
+                        const px = (e.clientX - rect.left) / rect.width; // 0..1
+                        const py = (e.clientY - rect.top) / rect.height; // 0..1
+                        const tiltX = clamp((0.5 - py) * 10, -8, 8); // deg
+                        const tiltY = clamp((px - 0.5) * 14, -12, 12); // deg
+                        heroDevice.style.setProperty('--tiltX', `${tiltX}deg`);
+                        heroDevice.style.setProperty('--tiltY', `${tiltY}deg`);
+                    });
+                    heroDevice.addEventListener('mouseleave', () => {
+                        heroDevice.style.setProperty('--tiltX', `6deg`);
+                        heroDevice.style.setProperty('--tiltY', `-12deg`);
+                    });
+                }
+            }
+
+            // 右下角“刚刚成功发送”文件轮播（体现多类型/多文件名）
+            const recentFileName = document.getElementById('recentFileName');
+            const recentFileIcon = document.getElementById('recentFileIcon');
+            const recentFileBadge = document.getElementById('recentFileBadge');
+            const recentFiles = [
+                { name: '楼盘销讲资料.pdf', icon: 'ph-file-pdf', gradient: ['from-red-400', 'to-red-500'], shadow: 'shadow-red-500/30' },
+                { name: '项目报价单.xlsx', icon: 'ph-file-xls', gradient: ['from-emerald-400', 'to-green-600'], shadow: 'shadow-emerald-500/30' },
+                { name: '客户跟进表.xlsx', icon: 'ph-file-xls', gradient: ['from-teal-400', 'to-cyan-600'], shadow: 'shadow-teal-500/30' },
+                { name: '产品手册.docx', icon: 'ph-file-doc', gradient: ['from-indigo-400', 'to-blue-600'], shadow: 'shadow-indigo-500/30' },
+                { name: '户型图合集.zip', icon: 'ph-file-zip', gradient: ['from-amber-400', 'to-orange-500'], shadow: 'shadow-amber-500/30' },
+                { name: '活动海报.png', icon: 'ph-image', gradient: ['from-pink-400', 'to-rose-500'], shadow: 'shadow-pink-500/30' },
+                { name: '直播话术.txt', icon: 'ph-file-text', gradient: ['from-slate-400', 'to-gray-600'], shadow: 'shadow-gray-500/25' }
+            ];
+            let recentFileIndex = 0;
+            function applyRecentFile(item) {
+                if (recentFileName) recentFileName.textContent = item.name;
+                if (recentFileIcon) recentFileIcon.className = `ph-fill ${item.icon} text-2xl`;
+                if (recentFileBadge) {
+                    recentFileBadge.className = `h-12 w-12 bg-gradient-to-br ${item.gradient[0]} ${item.gradient[1]} rounded-xl flex items-center justify-center text-white shadow-lg ${item.shadow}`;
+                }
+            }
+            if (recentFileName && recentFileIcon && recentFileBadge) {
+                applyRecentFile(recentFiles[0]);
+                window.setInterval(() => {
+                    recentFileIndex = (recentFileIndex + 1) % recentFiles.length;
+                    applyRecentFile(recentFiles[recentFileIndex]);
+                }, 2600);
+            }
+
+            // 滚动揭示动效 (Scroll Reveal Observer)
+            const revealElements = document.querySelectorAll('.reveal');
+            const revealOptions = {
+                threshold: 0.1, // 元素出现 10% 时触发
+                rootMargin: "0px 0px -50px 0px"
+            };
+
+            const revealObserver = new IntersectionObserver(function(entries, observer) {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) {
+                        return;
+                    }
+                    entry.target.classList.add('active');
+                    observer.unobserve(entry.target); // 触发一次后取消观察
+                });
+            }, revealOptions);
+
+            revealElements.forEach(el => {
+                revealObserver.observe(el);
+            });
+
+            // 导航栏滚动模糊效果增强
+            const navbar = document.getElementById('navbar');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 20) {
+                    navbar.classList.add('shadow-sm', 'bg-white/80');
+                    navbar.classList.remove('bg-white/50');
+                } else {
+                    navbar.classList.remove('shadow-sm', 'bg-white/80');
+                    navbar.classList.add('bg-white/50');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
